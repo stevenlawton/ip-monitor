@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  ip-monitor:
+    build: .
+    container_name: ip-monitor
+    restart: unless-stopped
+    environment:
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
