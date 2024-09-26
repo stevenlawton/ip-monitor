@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -49,7 +50,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening connection to Discord: %v", err)
 	}
-	defer dg.Close()
+	defer func(dg *discordgo.Session) {
+		err := dg.Close()
+		if err != nil {
+			log.Fatalf("Error closing connection to Discord: %v", err)
+		}
+	}(dg)
 
 	log.Println("Bot is now running. Press CTRL+C to exit.")
 
@@ -90,9 +96,14 @@ func getExternalIP() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Error closing connection to IP Checker: %v", err)
+		}
+	}(resp.Body)
 
-	ip, err := ioutil.ReadAll(resp.Body)
+	ip, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -109,23 +120,33 @@ func updateDiscordMessage(dg *discordgo.Session, channelID, currentIP string) er
 
 	var pinnedMessageID string
 	if len(pinnedMessages) > 0 {
-		// Assume the first pinned message is the one to update
-		pinnedMessageID = pinnedMessages[0].ID
-		_, err = dg.ChannelMessageEdit(channelID, pinnedMessageID, fmt.Sprintf("Current IP Address: `%s`", currentIP))
-		if err != nil {
-			return fmt.Errorf("error editing pinned message: %w", err)
-		}
-	} else {
-		// Send a new message and pin it
-		msg, err := dg.ChannelMessageSend(channelID, fmt.Sprintf("Current IP Address: `%s`", currentIP))
-		if err != nil {
-			return fmt.Errorf("error sending message: %w", err)
-		}
+		for _, message := range pinnedMessages {
+			// Assume the first pinned message is the one to update
+			if strings.Contains(message.Content, "Current IP Address:") {
+				pinnedMessageID = message.ID
+				_, err = dg.ChannelMessageEdit(channelID, pinnedMessageID, fmt.Sprintf("Current IP Address: `%s`", currentIP))
+				if err != nil {
+					return fmt.Errorf("error editing pinned message: %w", err)
+				}
+				// Send a broadcast message
+				_, err = dg.ChannelMessageSend(channelID, fmt.Sprintf("IP Address has changed to `%s`", currentIP))
+				if err != nil {
+					return fmt.Errorf("error sending broadcast message: %w", err)
+				}
 
-		err = dg.ChannelMessagePin(channelID, msg.ID)
-		if err != nil {
-			return fmt.Errorf("error pinning message: %w", err)
+				return nil
+			}
 		}
+	}
+	// Send a new message and pin it
+	msg, err := dg.ChannelMessageSend(channelID, fmt.Sprintf("Current IP Address: `%s`", currentIP))
+	if err != nil {
+		return fmt.Errorf("error sending message: %w", err)
+	}
+
+	err = dg.ChannelMessagePin(channelID, msg.ID)
+	if err != nil {
+		return fmt.Errorf("error pinning message: %w", err)
 	}
 
 	// Send a broadcast message
