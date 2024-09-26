@@ -7,21 +7,21 @@ This Go application monitors your external IP address and updates a pinned messa
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Setup Instructions](#setup-instructions)
-  - [1. Clone the Repository](#1-clone-the-repository)
-  - [2. Create a Discord Bot](#2-create-a-discord-bot)
-  - [3. Create a `.env` File](#3-create-a-env-file)
-  - [4. Install Dependencies](#4-install-dependencies)
-  - [5. Build and Run Locally (Optional)](#5-build-and-run-locally-optional)
-  - [6. Build the Docker Image](#6-build-the-docker-image)
-  - [7. Run the Docker Container](#7-run-the-docker-container)
+    - [1. Clone the Repository](#1-clone-the-repository)
+    - [2. Create a Discord Bot](#2-create-a-discord-bot)
+    - [3. Create a `.env` File](#3-create-a-env-file)
+    - [4. Install Dependencies](#4-install-dependencies)
+    - [5. Build and Run Locally (Optional)](#5-build-and-run-locally-optional)
+    - [6. Build the Docker Image](#6-build-the-docker-image)
+    - [7. Run the Docker Container](#7-run-the-docker-container)
 - [Environment Variables](#environment-variables)
 - [Stopping the Bot](#stopping-the-bot)
 - [Updating the Bot](#updating-the-bot)
 - [Additional Considerations](#additional-considerations)
-  - [Security Notes](#security-notes)
-  - [Adjusting the Check Interval](#adjusting-the-check-interval)
-  - [Logging and Monitoring](#logging-and-monitoring)
-  - [Error Handling](#error-handling)
+    - [Security Notes](#security-notes)
+    - [Adjusting the Check Interval](#adjusting-the-check-interval)
+    - [Logging and Monitoring](#logging-and-monitoring)
+    - [Error Handling](#error-handling)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -63,25 +63,34 @@ cd ip-monitor
 
 1. **Go to the Discord Developer Portal**: [Discord Developer Portal](https://discord.com/developers/applications)
 2. **Create a New Application**:
-  - Click on **"New Application"**.
-  - Enter a name for your application and click **"Create"**.
+
+- Click on **"New Application"**.
+- Enter a name for your application and click **"Create"**.
+
 3. **Add a Bot to Your Application**:
-  - Navigate to the **"Bot"** tab on the left.
-  - Click **"Add Bot"** and confirm.
+
+- Navigate to the **"Bot"** tab on the left.
+- Click **"Add Bot"** and confirm.
+
 4. **Copy the Bot Token**:
-  - Under the bot's username, click **"Copy"** to copy the bot's token.
-  - **Important**: Keep this token secure!
+
+- Under the bot's username, click **"Copy"** to copy the bot's token.
+- **Important**: Keep this token secure!
+
 5. **Invite the Bot to Your Server**:
-  - Go to the **"OAuth2"** tab and then **"URL Generator"**.
-  - Under **"Scopes"**, select **"bot"**.
-  - Under **"Bot Permissions"**, select the following permissions:
+
+- Go to the **"OAuth2"** tab and then **"URL Generator"**.
+- Under **"Scopes"**, select **"bot"**.
+- Under **"Bot Permissions"**, select the following permissions:
     - **Send Messages**
     - **Manage Messages**
     - **Read Message History**
-  - Copy the generated URL and paste it into your browser to invite the bot to your server.
+- Copy the generated URL and paste it into your browser to invite the bot to your server.
+
 6. **Get the Channel ID**:
-  - Enable **Developer Mode** in Discord settings (User Settings > Advanced > Developer Mode).
-  - Right-click the channel where you want the bot to post and select **"Copy ID"**.
+
+- Enable **Developer Mode** in Discord settings (User Settings > Advanced > Developer Mode).
+- Right-click the channel where you want the bot to post and select **"Copy ID"**.
 
 ### 3. Create a `.env` File
 
@@ -183,9 +192,9 @@ If you make changes to the code:
 - **Protect Your `.env` File**: Ensure your `.env` file is not committed to version control. It contains sensitive information.
 - **Environment Variables in Production**: For production environments, consider using a secrets manager or setting environment variables directly in your deployment environment.
 - **Bot Permissions**: Ensure your bot has the correct permissions in the Discord channel:
-  - **Send Messages**
-  - **Manage Messages** (to pin messages)
-  - **Read Message History**
+    - **Send Messages**
+    - **Manage Messages** (to pin messages)
+    - **Read Message History**
 
 ### Adjusting the Check Interval
 
@@ -218,21 +227,21 @@ If you make changes to the code:
 ## Troubleshooting
 
 - **Bot Not Responding**:
-  - Verify the bot is online in your Discord server.
-  - Ensure the bot has the necessary permissions.
-  - Check the logs for errors:
+    - Verify the bot is online in your Discord server.
+    - Ensure the bot has the necessary permissions.
+    - Check the logs for errors:
 
-    ```bash
-    docker logs ip-monitor
-    ```
+      ```bash
+      docker logs ip-monitor
+      ```
 
 - **Environment Variables Not Set**:
-  - Ensure the `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are correctly set in your `.env` file.
-  - Verify that the `.env` file is in the project root and is correctly formatted.
+    - Ensure the `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are correctly set in your `.env` file.
+    - Verify that the `.env` file is in the project root and is correctly formatted.
 
 - **Cannot Connect to Discord**:
-  - Ensure your network allows outbound connections to Discord's API.
-  - Check for firewall or network restrictions.
+    - Ensure your network allows outbound connections to Discord's API.
+    - Check for firewall or network restrictions.
 
 ---
 
@@ -302,6 +311,6 @@ If you're interested in extending the functionality of the bot, consider the fol
 
 ## Contact
 
-- **Author**: Your Name
-- **Email**: your.email@example.com
-- **GitHub**: [yourusername](https://github.com/yourusername)
+- **Author**: Steven Lawton
+- **Email**: ip-monitor@stevenlawton.com
+- **GitHub**: [stevenlawton](https://github.com/stevenlawton)
