@@ -25,7 +25,8 @@ const (
 )
 
 var (
-	previousIP string
+	previousIP   string
+	ArkChannelID string
 )
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 	// Now you can use os.Getenv to get the variables
 	botToken := os.Getenv("DISCORD_BOT_TOKEN")
 	channelID := os.Getenv("DISCORD_CHANNEL_ID")
+	ArkChannelID = os.Getenv("DISCORD_ARK_CHANNEL_ID")
 
 	if botToken == "" || channelID == "" {
 		log.Fatal("Bot token or channel ID not set. Please set DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID.")
@@ -84,7 +86,7 @@ func main() {
 					log.Printf("Error updating Discord message: %v", err)
 				}
 
-				err = restartARKServer()
+				err = restartARKServer(dg)
 				if err != nil {
 					log.Printf("Error restarting ARK: %v", err)
 				}
@@ -167,20 +169,20 @@ func updateDiscordMessage(dg *discordgo.Session, channelID, currentIP string) er
 	return nil
 }
 
-func restartARKServer() error {
+func restartARKServer(dg *discordgo.Session) error {
 	// Connect to Docker daemon
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Fatalf("Error creating Docker client: %v", err)
 	}
 
-	restartContainers(context.Background(), cli)
+	restartContainers(context.Background(), cli, dg)
 
 	return nil
 }
 
 // RestartContainers stops and starts containers based on specific criteria
-func restartContainers(ctx context.Context, cli *client.Client) {
+func restartContainers(ctx context.Context, cli *client.Client, dg *discordgo.Session) {
 	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		log.Fatalf("Error listing containers: %v", err)
@@ -198,28 +200,36 @@ func restartContainers(ctx context.Context, cli *client.Client) {
 					err := cli.ContainerStop(ctx, ct.ID, container.StopOptions{})
 					if err != nil {
 						log.Printf("Error stopping container %s: %v\n", ct.ID, err)
+						_, err = dg.ChannelMessageSend(ArkChannelID, fmt.Sprintf("External IP Changed, Error restarting server (stopping) `%s`", err.Error()))
 						continue
 					}
 
 					// Wait for the container to stop
 					if waitForStatus(ctx, cli, ct.ID, "exited") {
 						fmt.Printf("Container %s stopped successfully.\n", ct.ID)
+						_, err = dg.ChannelMessageSend(ArkChannelID, fmt.Sprintf("External IP Changed, restarting server (stopped)..."))
 					} else {
 						log.Printf("Timeout waiting for container %s to stop.\n", ct.ID)
+						_, err = dg.ChannelMessageSend(ArkChannelID, "External IP Changed, Timeout waiting for container to stop.")
 						continue
 					}
 
-					fmt.Printf("Container %s starting...\n", ct.ID)
+					fmt.Printf("External IP Changed, Container %s starting...\n", ct.ID)
+					_, err = dg.ChannelMessageSend(ArkChannelID, "Container starting...")
+
 					err = cli.ContainerStart(ctx, ct.ID, container.StartOptions{})
 					if err != nil {
 						log.Printf("Error starting container %s: %v\n", ct.ID, err)
+						_, err = dg.ChannelMessageSend(ArkChannelID, fmt.Sprintf("External IP Changed, Error starting server `%s`", err.Error()))
 						continue
 					}
 
 					// Wait for the container to start
 					if waitForStatus(ctx, cli, ct.ID, "running") {
+						_, err = dg.ChannelMessageSend(ArkChannelID, "External IP Changed, Container started successfully.")
 						fmt.Printf("Container %s started successfully.\n", ct.ID)
 					} else {
+						_, err = dg.ChannelMessageSend(ArkChannelID, "External IP Changed, Timeout waiting for container to start")
 						log.Printf("Timeout waiting for container %s to start.\n", ct.ID)
 					}
 				}
