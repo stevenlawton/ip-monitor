@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/docker/docker/api/types/container"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/docker/docker/client"
 	"github.com/joho/godotenv"
 )
 
@@ -78,6 +82,11 @@ func main() {
 				err = updateDiscordMessage(dg, channelID, currentIP)
 				if err != nil {
 					log.Printf("Error updating Discord message: %v", err)
+				}
+
+				err = restartARKServer()
+				if err != nil {
+					log.Printf("Error restarting ARK: %v", err)
 				}
 				previousIP = currentIP
 			}
@@ -156,4 +165,86 @@ func updateDiscordMessage(dg *discordgo.Session, channelID, currentIP string) er
 	}
 
 	return nil
+}
+
+func restartARKServer() error {
+	// Connect to Docker daemon
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Fatalf("Error creating Docker client: %v", err)
+	}
+
+	restartContainers(context.Background(), cli)
+
+	return nil
+}
+
+// RestartContainers stops and starts containers based on specific criteria
+func restartContainers(ctx context.Context, cli *client.Client) {
+	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		log.Fatalf("Error listing containers: %v", err)
+	}
+
+	containerIDs := make([]string, 10)
+
+	for _, ct := range containers {
+		if strings.Contains(ct.Image, "acekorneya/asa_server") {
+			for _, name := range ct.Names {
+				if strings.Contains(name, "asa_ARK_Lawton") || slices.Contains(containerIDs, ct.ID) {
+					containerIDs = append(containerIDs, ct.ID)
+					fmt.Printf("Container %s(%s) stopping...\n", ct.Names, ct.ID)
+
+					err := cli.ContainerStop(ctx, ct.ID, container.StopOptions{})
+					if err != nil {
+						log.Printf("Error stopping container %s: %v\n", ct.ID, err)
+						continue
+					}
+
+					// Wait for the container to stop
+					if waitForStatus(ctx, cli, ct.ID, "exited") {
+						fmt.Printf("Container %s stopped successfully.\n", ct.ID)
+					} else {
+						log.Printf("Timeout waiting for container %s to stop.\n", ct.ID)
+						continue
+					}
+
+					fmt.Printf("Container %s starting...\n", ct.ID)
+					err = cli.ContainerStart(ctx, ct.ID, container.StartOptions{})
+					if err != nil {
+						log.Printf("Error starting container %s: %v\n", ct.ID, err)
+						continue
+					}
+
+					// Wait for the container to start
+					if waitForStatus(ctx, cli, ct.ID, "running") {
+						fmt.Printf("Container %s started successfully.\n", ct.ID)
+					} else {
+						log.Printf("Timeout waiting for container %s to start.\n", ct.ID)
+					}
+				}
+			}
+		}
+	}
+}
+
+// waitForStatus waits until the container status matches the desired status
+func waitForStatus(ctx context.Context, cli *client.Client, containerID string, desiredStatus string) bool {
+	timeout := time.Now().Add(30 * time.Second) // Adjust timeout as needed
+
+	for time.Now().Before(timeout) {
+		ct, err := cli.ContainerInspect(ctx, containerID)
+		if err != nil {
+			log.Printf("Error inspecting container %s: %v\n", containerID, err)
+			return false
+		}
+
+		if ct.State.Status == desiredStatus {
+			return true
+		}
+
+		time.Sleep(1 * time.Second) // Avoid busy waiting
+	}
+
+	return false
 }
